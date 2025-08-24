@@ -221,6 +221,17 @@ You can only run a development server locally **after** having successfully run 
 It's also possible to enable hotloading or the VS Code debugger.
 See more tips in [the local development guide](docs/localdev.md).
 
+### Environment variables
+
+The backend reads configuration from environment variables via the `Settings` class
+(`app/backend/settings.py`).
+Set the following variables before running the app:
+
+- `AZURE_TENANT_ID` → `tenant_id`
+- `AZURE_CLIENT_ID` → `client_id`
+- `API_BASE_URL` → `api_base_url`
+- `AZURE_STORAGE_ENDPOINT` → `storage_endpoint`
+
 ## Using the app
 
 - In Azure: navigate to the Azure WebApp deployed by azd. The URL is printed out when azd completes (as "Endpoint"), or you can find it in the Azure portal.
