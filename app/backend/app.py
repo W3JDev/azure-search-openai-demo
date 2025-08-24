@@ -102,6 +102,7 @@ from prepdocs import (
 )
 from prepdocslib.filestrategy import UploadUserFileStrategy
 from prepdocslib.listfilestrategy import File
+from validator import evaluate_response
 
 bp = Blueprint("routes", __name__, static_folder="static")
 # Fix Windows registry issue with mimetypes
@@ -194,6 +195,8 @@ async def ask(auth_claims: dict[str, Any]):
         r = await approach.run(
             request_json["messages"], context=context, session_state=request_json.get("session_state")
         )
+        score = evaluate_response(r)
+        current_app.logger.debug("Response score: %s", score)
         return jsonify(r)
     except Exception as error:
         return error_response(error, "/ask")
@@ -244,6 +247,8 @@ async def chat(auth_claims: dict[str, Any]):
             context=context,
             session_state=session_state,
         )
+        score = evaluate_response(result)
+        current_app.logger.debug("Response score: %s", score)
         return jsonify(result)
     except Exception as error:
         return error_response(error, "/chat")
