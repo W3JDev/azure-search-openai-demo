@@ -51,6 +51,8 @@ azure-identity==1.17.1
     # via
     #   -r requirements.in
     #   msgraph-sdk
+azure-keyvault-secrets==4.10.0
+    # via -r requirements.in
 azure-monitor-opentelemetry==1.6.13
     # via -r requirements.in
 azure-monitor-opentelemetry-exporter==1.0.0b40
