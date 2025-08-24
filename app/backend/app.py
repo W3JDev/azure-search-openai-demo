@@ -94,6 +94,7 @@ from core.authentication import AuthenticationHelper
 from core.sessionhelper import create_session_id
 from decorators import authenticated, authenticated_path
 from error import error_dict, error_response
+from orchestrator import build_default_orchestrator
 from prepdocs import (
     clean_key_if_exists,
     setup_embeddings_service,
@@ -108,6 +109,8 @@ bp = Blueprint("routes", __name__, static_folder="static")
 mimetypes.add_type("application/javascript", ".js")
 mimetypes.add_type("text/css", ".css")
 
+
+orchestrator = build_default_orchestrator()
 
 @bp.route("/")
 async def index():
@@ -186,11 +189,17 @@ async def ask(auth_claims: dict[str, Any]):
     context["auth_claims"] = auth_claims
     try:
         use_gpt4v = context.get("overrides", {}).get("use_gpt4v", False)
-        approach: Approach
-        if use_gpt4v and CONFIG_ASK_VISION_APPROACH in current_app.config:
-            approach = cast(Approach, current_app.config[CONFIG_ASK_VISION_APPROACH])
+        route = orchestrator.route(request_json, default="data")
+        if route == "chat":
+            if use_gpt4v and CONFIG_CHAT_VISION_APPROACH in current_app.config:
+                approach = cast(Approach, current_app.config[CONFIG_CHAT_VISION_APPROACH])
+            else:
+                approach = cast(Approach, current_app.config[CONFIG_CHAT_APPROACH])
         else:
-            approach = cast(Approach, current_app.config[CONFIG_ASK_APPROACH])
+            if use_gpt4v and CONFIG_ASK_VISION_APPROACH in current_app.config:
+                approach = cast(Approach, current_app.config[CONFIG_ASK_VISION_APPROACH])
+            else:
+                approach = cast(Approach, current_app.config[CONFIG_ASK_APPROACH])
         r = await approach.run(
             request_json["messages"], context=context, session_state=request_json.get("session_state")
         )
@@ -225,11 +234,17 @@ async def chat(auth_claims: dict[str, Any]):
     context["auth_claims"] = auth_claims
     try:
         use_gpt4v = context.get("overrides", {}).get("use_gpt4v", False)
-        approach: Approach
-        if use_gpt4v and CONFIG_CHAT_VISION_APPROACH in current_app.config:
-            approach = cast(Approach, current_app.config[CONFIG_CHAT_VISION_APPROACH])
+        route = orchestrator.route(request_json, default="chat")
+        if route == "data":
+            if use_gpt4v and CONFIG_ASK_VISION_APPROACH in current_app.config:
+                approach = cast(Approach, current_app.config[CONFIG_ASK_VISION_APPROACH])
+            else:
+                approach = cast(Approach, current_app.config[CONFIG_ASK_APPROACH])
         else:
-            approach = cast(Approach, current_app.config[CONFIG_CHAT_APPROACH])
+            if use_gpt4v and CONFIG_CHAT_VISION_APPROACH in current_app.config:
+                approach = cast(Approach, current_app.config[CONFIG_CHAT_VISION_APPROACH])
+            else:
+                approach = cast(Approach, current_app.config[CONFIG_CHAT_APPROACH])
 
         # If session state is provided, persists the session state,
         # else creates a new session_id depending on the chat history options enabled.
@@ -259,11 +274,17 @@ async def chat_stream(auth_claims: dict[str, Any]):
     context["auth_claims"] = auth_claims
     try:
         use_gpt4v = context.get("overrides", {}).get("use_gpt4v", False)
-        approach: Approach
-        if use_gpt4v and CONFIG_CHAT_VISION_APPROACH in current_app.config:
-            approach = cast(Approach, current_app.config[CONFIG_CHAT_VISION_APPROACH])
+        route = orchestrator.route(request_json, default="chat")
+        if route == "data":
+            if use_gpt4v and CONFIG_ASK_VISION_APPROACH in current_app.config:
+                approach = cast(Approach, current_app.config[CONFIG_ASK_VISION_APPROACH])
+            else:
+                approach = cast(Approach, current_app.config[CONFIG_ASK_APPROACH])
         else:
-            approach = cast(Approach, current_app.config[CONFIG_CHAT_APPROACH])
+            if use_gpt4v and CONFIG_CHAT_VISION_APPROACH in current_app.config:
+                approach = cast(Approach, current_app.config[CONFIG_CHAT_VISION_APPROACH])
+            else:
+                approach = cast(Approach, current_app.config[CONFIG_CHAT_APPROACH])
 
         # If session state is provided, persists the session state,
         # else creates a new session_id depending on the chat history options enabled.
