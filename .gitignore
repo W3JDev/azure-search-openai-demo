@@ -147,6 +147,9 @@ cython_debug/
 npm-debug.log*
 node_modules
 static/
+!app/backend/static/
+!app/backend/static/index.html
+!app/backend/static/favicon.ico
 
 data/**/*.md5
 
