@@ -1,7 +1,14 @@
+# ruff: noqa: E402
 import json
 import os
+import pathlib
+import sys
 from typing import IO, Any
 from unittest import mock
+
+ROOT_DIR = pathlib.Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 import aiohttp
 import azure.cognitiveservices.speech
@@ -29,15 +36,17 @@ from openai.types.create_embedding_response import Usage
 
 import app
 import core
-from core.authentication import AuthenticationHelper
+from app.backend.prepdocslib.strategy import SearchInfo  # noqa: E402
+from core.authentication import AuthenticationHelper  # noqa: E402
 
-from .mocks import (
+from .mocks import (  # noqa: E402
     MockAsyncPageIterator,
     MockAsyncSearchResultsIterator,
     MockAzureCredential,
     MockAzureCredentialExpired,
     MockBlobClient,
     MockResponse,
+    MockSearchClient,
     mock_computervision_response,
     mock_retrieval_response,
     mock_speak_text_cancelled,
@@ -53,6 +62,17 @@ MockSearchIndex = SearchIndex(
     ],
 )
 MockAgent = KnowledgeAgent(name="test", models=[], target_indexes=[], request_limits=[])
+
+
+@pytest.fixture(scope="session", autouse=True)
+def set_azure_test_mode():
+    os.environ.setdefault("AZURE_TEST_MODE", "mock")
+
+
+@pytest.fixture(autouse=True)
+def mock_azure_services(monkeypatch):
+    if os.getenv("AZURE_TEST_MODE") == "mock":
+        monkeypatch.setattr(SearchInfo, "create_search_client", lambda self: MockSearchClient())
 
 
 async def mock_search(self, *args, **kwargs):

@@ -159,6 +159,21 @@ class MockAsyncSearchResultsIterator:
         return self
 
 
+class MockSearchClient:
+    def __init__(self):
+        self.filter = None
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        pass
+
+    async def search(self, *args, **kwargs):
+        self.filter = kwargs.get("filter")
+        return MockAsyncSearchResultsIterator(kwargs.get("search_text"), kwargs.get("vector_queries"))
+
+
 class MockResponse:
     def __init__(self, status, text=None, headers=None):
         self._text = text or ""
