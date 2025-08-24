@@ -11,6 +11,7 @@ import "./index.css";
 
 import Chat from "./pages/chat/Chat";
 import LayoutWrapper from "./layoutWrapper";
+import RequireAuth from "./components/RequireAuth";
 import i18next from "./i18n/config";
 import { msalConfig, useLogin } from "./authConfig";
 
@@ -23,15 +24,37 @@ const router = createHashRouter([
         children: [
             {
                 index: true,
-                element: <Chat />
+                element: (
+                    <RequireAuth>
+                        <Chat />
+                    </RequireAuth>
+                )
             },
             {
                 path: "qa",
-                lazy: () => import("./pages/ask/Ask")
+                lazy: async () => {
+                    const { Component: Ask } = await import("./pages/ask/Ask");
+                    return {
+                        element: (
+                            <RequireAuth>
+                                <Ask />
+                            </RequireAuth>
+                        )
+                    };
+                }
             },
             {
                 path: "*",
-                lazy: () => import("./pages/NoPage")
+                lazy: async () => {
+                    const { Component: NoPage } = await import("./pages/NoPage");
+                    return {
+                        element: (
+                            <RequireAuth>
+                                <NoPage />
+                            </RequireAuth>
+                        )
+                    };
+                }
             }
         ]
     }
