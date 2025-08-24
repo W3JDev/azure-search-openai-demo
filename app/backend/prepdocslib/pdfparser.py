@@ -3,6 +3,7 @@ import io
 import logging
 from collections.abc import AsyncGenerator
 from enum import Enum
+import re
 from typing import IO, Union
 
 import pymupdf
@@ -26,6 +27,14 @@ from .parser import Parser
 logger = logging.getLogger("scripts")
 
 
+def normalize_text(data: str) -> str:
+    """Normalize OCR text by collapsing whitespace and newlines."""
+    output = data.replace("\r\n", "\n").replace("\r", "\n").replace("\u00A0", " ")
+    output = re.sub(r"\n{2,}", "\n", output)
+    output = re.sub(r"[^\S\n]{2,}", " ", output)
+    return output.strip()
+
+
 class LocalPdfParser(Parser):
     """
     Concrete parser backed by PyPDF that can parse PDFs into pages
@@ -39,7 +48,7 @@ class LocalPdfParser(Parser):
         pages = reader.pages
         offset = 0
         for page_num, p in enumerate(pages):
-            page_text = p.extract_text()
+            page_text = normalize_text(p.extract_text())
             yield Page(page_num=page_num, offset=offset, text=page_text)
             offset += len(page_text)
 
@@ -174,8 +183,7 @@ class DocumentAnalysisParser(Parser):
                             added_objects.add(mask_char)
                 # We remove these comments since they are not needed and skew the page numbers
                 page_text = page_text.replace("<!-- PageBreak -->", "")
-                # We remove excess newlines at the beginning and end of the page
-                page_text = page_text.strip()
+                page_text = normalize_text(page_text)
                 yield Page(page_num=page.page_number - 1, offset=offset, text=page_text)
                 offset += len(page_text)
 

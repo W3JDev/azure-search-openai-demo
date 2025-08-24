@@ -22,7 +22,7 @@ from azure.core.exceptions import HttpResponseError
 from PIL import Image, ImageChops
 
 from prepdocslib.mediadescriber import ContentUnderstandingDescriber
-from prepdocslib.pdfparser import DocumentAnalysisParser
+from prepdocslib.pdfparser import DocumentAnalysisParser, LocalPdfParser, normalize_text
 
 from .mocks import MockAzureCredential
 
@@ -252,7 +252,7 @@ async def test_parse_doc_with_tables(monkeypatch):
     assert pages[0].offset == 0
     assert (
         pages[0].text
-        == "# Simple HTML Table\n\n\n<figure><table><tr><th>Header 1</th><th>Header 2</th></tr><tr><td>Cell 1</td><td>Cell 2</td></tr><tr><td>Cell 3</td><td>Cell 4</td></tr></table></figure>"
+        == "# Simple HTML Table\n<figure><table><tr><th>Header 1</th><th>Header 2</th></tr><tr><td>Cell 1</td><td>Cell 2</td></tr><tr><td>Cell 3</td><td>Cell 4</td></tr></table></figure>"
     )
 
 
@@ -308,7 +308,7 @@ async def test_parse_doc_with_figures(monkeypatch):
     assert pages[0].offset == 0
     assert (
         pages[0].text
-        == "# Simple Figure\n\nThis text is before the figure and NOT part of it.\n\n\n<figure><figcaption>Figure 1<br>Pie chart</figcaption></figure>\n\n\nThis is text after the figure that's not part of it."
+        == "# Simple Figure\nThis text is before the figure and NOT part of it.\n<figure><figcaption>Figure 1<br>Pie chart</figcaption></figure>\nThis is text after the figure that's not part of it."
     )
 
 
@@ -370,3 +370,56 @@ async def test_parse_unsupportedformat(monkeypatch, caplog):
     assert pages[0].page_num == 0
     assert pages[0].offset == 0
     assert pages[0].text == "Page content"
+
+
+def test_normalize_text():
+    raw = "  This  has\n\n multiple\t\tspaces  "
+    assert normalize_text(raw) == "This has\n multiple spaces"
+
+
+@pytest.mark.asyncio
+async def test_local_pdfparser_normalization(monkeypatch):
+    class MockPage:
+        def extract_text(self):
+            return "  Hello   world\n\nSecond line  "
+
+    class MockReader:
+        pages = [MockPage()]
+
+    monkeypatch.setattr("prepdocslib.pdfparser.PdfReader", lambda content: MockReader())
+
+    parser = LocalPdfParser()
+    content = io.BytesIO(b"pdf")
+    content.name = "test.pdf"
+    pages = [page async for page in parser.parse(content)]
+    assert pages[0].text == "Hello world\nSecond line"
+
+
+@pytest.mark.asyncio
+async def test_documentanalysisparser_normalization(monkeypatch):
+    mock_poller = MagicMock()
+
+    async def mock_begin_analyze_document(self, model_id, analyze_request, **kwargs):
+        return mock_poller
+
+    raw = "  Hello   world\n\nSecond line  "
+
+    async def mock_poller_result():
+        return AnalyzeResult(
+            content=raw,
+            pages=[DocumentPage(page_number=1, spans=[DocumentSpan(offset=0, length=len(raw))])],
+            tables=[],
+            figures=[],
+        )
+
+    monkeypatch.setattr(DocumentIntelligenceClient, "begin_analyze_document", mock_begin_analyze_document)
+    monkeypatch.setattr(mock_poller, "result", mock_poller_result)
+
+    parser = DocumentAnalysisParser(
+        endpoint="https://example.com", credential=MockAzureCredential(), use_content_understanding=False
+    )
+    content = io.BytesIO(b"pdf bytes")
+    content.name = "test.pdf"
+
+    pages = [page async for page in parser.parse(content)]
+    assert pages[0].text == "Hello world\nSecond line"
