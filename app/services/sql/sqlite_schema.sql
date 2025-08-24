@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    text TEXT NOT NULL,
+    embedding TEXT NOT NULL,
+    metadata TEXT
+);
