@@ -27,6 +27,7 @@ PyMuPDF
 beautifulsoup4
 types-beautifulsoup4
 msgraph-sdk
+pydantic-settings
 python-dotenv
 prompty
 rich
